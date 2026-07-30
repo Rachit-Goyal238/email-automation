@@ -2,13 +2,17 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, request, url_for
 from authlib.integrations.flask_client import OAuth
-
+from werkzeug.middleware.proxy_fix import ProxyFix
 from oauth.token_store import get_token, save_token
 
 load_dotenv()
 
 app = Flask(__name__)
-
+app.wsgi_app = ProxyFix(
+    app.wsgi_app,
+    x_proto=1,
+    x_host=1
+)
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 if not app.secret_key:
