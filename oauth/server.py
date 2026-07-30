@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, request, url_for
 from authlib.integrations.flask_client import OAuth
 
-from token_store import get_token, save_token
+from oauth.token_store import get_token, save_token
 
 load_dotenv()
 
