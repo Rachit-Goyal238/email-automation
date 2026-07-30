@@ -1,57 +1,49 @@
-from pathlib import Path
+import os
+import requests
+import streamlit as st
 
-from google.auth.transport.requests import Request
-from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 
 
-SCOPES = [
-    "https://www.googleapis.com/auth/gmail.compose"
-]
-
+CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+OAUTH_URL = os.getenv("OAUTH_URL", "http://localhost:5000")
 
 class GmailAuthenticator:
 
-    def __init__(self):
-        self.credentials_path = Path("credentials.json")
-        self.token_path = Path("token.json")
-
     def authenticate(self):
 
-        creds = None
+        if "google_credentials" in st.session_state:
+            return st.session_state["google_credentials"]
 
-        # Load saved token
-        if self.token_path.exists():
-            creds = Credentials.from_authorized_user_file(
-                str(self.token_path),
-                SCOPES
-            )
+        params = st.query_params
 
-        # Refresh expired token
-        if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
+        token_id = params.get("token")
 
-            except RefreshError:
-                # Refresh token has been revoked/expired.
-                # Delete the invalid token so a new OAuth flow can begin.
-                if self.token_path.exists():
-                    self.token_path.unlink()
+        if not token_id:
+            return None
 
-                creds = None
+        response = requests.get(
+            f"{OAUTH_URL}/token/{token_id}",
+            timeout=10
+        )
 
-        # First login or token refresh failed
-        if not creds or not creds.valid:
+        if response.status_code != 200:
+            return None
 
-            flow = InstalledAppFlow.from_client_secrets_file(
-                str(self.credentials_path),
-                SCOPES
-            )
+        token = response.json()
 
-            creds = flow.run_local_server(port=0)
+        credentials = Credentials(
+            token=token["access_token"],
+            refresh_token=token.get("refresh_token"),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET,
+            scopes=token["scope"].split()
+        )
 
-            with open(self.token_path, "w") as token:
-                token.write(creds.to_json())
+        st.session_state["google_credentials"] = credentials
 
-        return creds
+        st.query_params.clear()
+
+        return credentials

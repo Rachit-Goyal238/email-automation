@@ -20,21 +20,27 @@ def render():
 
         try:
 
-            gmail = GmailService()
+            credentials = st.session_state.get(
+                "google_credentials"
+            )
 
-            attachments = email["attachments"]
+            if credentials is None:
+                st.error("Please sign in with Google first.")
+                return
+
+            gmail = GmailService(credentials)
 
             gmail.create_draft(
                 to=email["to"],
                 cc=email["cc"],
                 subject=email["subject"],
                 html=email["result"]["html"],
-                attachments=attachments
+                attachments=email["attachments"]
             )
 
-            st.success("✅ Gmail Draft Created Successfully!")
-
-            st.info("Opening Gmail Drafts...")
+            st.success(
+                "✅ Gmail Draft Created Successfully!"
+            )
 
             components.html(
                 """
@@ -50,4 +56,4 @@ def render():
 
         except Exception as e:
 
-            st.error(str(e))
+            st.exception(e)

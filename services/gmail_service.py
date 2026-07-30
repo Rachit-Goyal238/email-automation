@@ -6,19 +6,15 @@ from email.mime.application import MIMEApplication
 
 from googleapiclient.discovery import build
 
-from auth.gmail_auth import GmailAuthenticator
-
 
 class GmailService:
 
-    def __init__(self):
-
-        creds = GmailAuthenticator().authenticate()
+    def __init__(self, credentials):
 
         self.service = build(
             "gmail",
             "v1",
-            credentials=creds
+            credentials=credentials
         )
 
     def create_draft(
@@ -33,7 +29,6 @@ class GmailService:
         if attachments is None:
             attachments = []
 
-        # mixed -> related -> html
         message = MIMEMultipart("mixed")
 
         message["To"] = to
@@ -46,11 +41,6 @@ class GmailService:
         related.attach(
             MIMEText(html, "html")
         )
-
-
-        # --------------------------------------------------
-        # Normal Attachments
-        # --------------------------------------------------
 
         for attachment in attachments:
 
@@ -76,9 +66,7 @@ class GmailService:
             }
         }
 
-        draft = self.service.users().drafts().create(
+        return self.service.users().drafts().create(
             userId="me",
             body=draft
         ).execute()
-
-        return draft
