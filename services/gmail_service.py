@@ -3,14 +3,15 @@ import base64
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
-
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
 
 class GmailService:
 
     def __init__(self, credentials):
-
+        if credentials.expired and credentials.refresh_token:
+            credentials.refresh(Request())
         self.service = build(
             "gmail",
             "v1",
