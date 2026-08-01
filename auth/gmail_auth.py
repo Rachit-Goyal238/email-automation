@@ -75,9 +75,13 @@ class GmailAuthenticator:
 
             credentials = self._exchange_token(token_id)
 
-            st.query_params.clear()
+            if credentials:
 
-            return credentials
+                st.query_params.clear()
+
+                st.rerun()
+
+            return None
 
         # No credentials available
         return None
