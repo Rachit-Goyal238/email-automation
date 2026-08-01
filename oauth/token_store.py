@@ -1,7 +1,14 @@
 import threading
 import time
 import uuid
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 # Token lifetime (seconds)
 TOKEN_TTL = 300  # 5 minutes
 
@@ -21,6 +28,10 @@ def _cleanup():
 
     for key in expired:
         _tokens.pop(key, None)
+    if expired:
+        logger.info(
+        f"Removed {len(expired)} expired OAuth token(s)."
+    )
 
 
 def save_token(token):
@@ -40,7 +51,9 @@ def save_token(token):
             "token": token,
             "created_at": time.time()
         }
-
+        logger.info(
+        "Temporary OAuth token stored."
+        )
         return key
 
 
@@ -57,6 +70,11 @@ def get_token(key):
         data = _tokens.pop(key, None)
 
         if data is None:
+            logger.warning(
+                "Invalid or expired OAuth token requested."
+            )
             return None
-
+        logger.info(
+        "OAuth token successfully retrieved."
+        )
         return data["token"]
