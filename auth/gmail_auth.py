@@ -28,12 +28,33 @@ class GmailAuthenticator:
 
     def _exchange_token(self, token_id):
 
-        response = requests.get(
-            f"{OAUTH_URL}/token/{token_id}",
-            timeout=10
-        )
+        try:
 
-        if response.status_code != 200:
+            response = requests.get(
+                f"{OAUTH_URL}/token/{token_id}",
+                timeout=10
+            )
+
+            response.raise_for_status()
+
+        except requests.exceptions.Timeout:
+
+            st.error(
+                "Authentication server timed out."
+            )
+
+            return None
+
+        except requests.exceptions.ConnectionError:
+
+            st.error(
+                "Cannot reach authentication server."
+            )
+
+            return None
+
+        except requests.exceptions.RequestException:
+
             return None
 
         token = response.json()
@@ -42,17 +63,13 @@ class GmailAuthenticator:
 
     def authenticate(self):
 
-        # Already authenticated in Streamlit
+        # Already authenticated during this Streamlit session
         if "google_credentials" in st.session_state:
+
             return st.session_state["google_credentials"]
 
-        # ---------------------------------------------------
-        # FIRST LOGIN (Google redirected back)
-        # ---------------------------------------------------
-
-        params = st.query_params
-
-        token_id = params.get("token")
+        # Returned from OAuth server
+        token_id = st.query_params.get("token")
 
         if token_id:
 
@@ -62,41 +79,5 @@ class GmailAuthenticator:
 
             return credentials
 
-        # ---------------------------------------------------
-        # RETURNING USER
-        # ---------------------------------------------------
-
-        try:
-
-            status = requests.get(
-                f"{OAUTH_URL}/status",
-                timeout=5
-            )
-
-            if status.status_code != 200:
-                return None
-
-            authenticated = status.json()["authenticated"]
-
-            if not authenticated:
-                return None
-
-            session_token = requests.get(
-                f"{OAUTH_URL}/session-token",
-                timeout=5
-            )
-
-            if session_token.status_code != 200:
-                return None
-
-            token_id = session_token.json()["token"]
-
-            return self._exchange_token(token_id)
-
-        except requests.exceptions.RequestException:
-
-            st.error(
-                "Unable to contact the authentication server."
-            )
-
-            return None
+        # No credentials available
+        return None

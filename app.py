@@ -23,18 +23,22 @@ initialize()
 auth = GmailAuthenticator()
 
 credentials = auth.authenticate()
+
 if credentials is None:
 
-    st.title("Email Automation")
+    st.title("Authentication Required")
 
-    st.info("Please sign in with Google")
+    st.warning(
+        "Please access the application using the company login URL."
+    )
 
     st.link_button(
-        "Sign in with Google",
+        "Login",
         f"{OAUTH_URL}/login"
     )
 
     st.stop()
+
 st.title("📧 TATA Capital Audit Email Automation")
 
 upload.render()

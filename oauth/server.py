@@ -71,17 +71,33 @@ logger.info("OAuth server initialized successfully.")
 # --------------------------------------------------
 @app.route("/")
 def home():
-    logger.info("Health check requested.")
-    return {
-        "status": "running",
-        "service": "OAuth Server"
-    }
+    return redirect(url_for("login"))
 
 
 @app.route("/login")
 def login():
 
-    logger.info("Google OAuth login initiated.")
+    logger.info("Login request received.")
+
+    # User already authenticated
+    if "google_token" in session:
+
+        logger.info("Existing OAuth session found.")
+
+        key = save_token(session["google_token"])
+
+        streamlit_url = os.getenv(
+            "STREAMLIT_URL",
+            "http://localhost:8501"
+        )
+
+        logger.info("Redirecting using existing session.")
+
+        return redirect(
+            f"{streamlit_url}/?token={key}"
+        )
+
+    logger.info("No existing session. Redirecting to Google.")
 
     redirect_uri = url_for(
         "authorize",
@@ -126,37 +142,6 @@ def authorize():
             }
         ), 500
 
-@app.route("/status")
-def status():
-
-    return jsonify(
-        {
-            "authenticated":
-                "google_token" in session
-        }
-    )
-
-@app.route("/session-token")
-def session_token():
-
-    token = session.get("google_token")
-
-    if token is None:
-
-        return jsonify(
-            {
-                "success": False
-            }
-        ), 401
-
-    key = save_token(token)
-
-    return jsonify(
-        {
-            "success": True,
-            "token": key
-        }
-    )
 
 @app.route("/token/<token_id>")
 def token(token_id):
