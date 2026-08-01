@@ -23,10 +23,31 @@ class GmailAuthenticator:
         if not token_id:
             return None
 
-        response = requests.get(
-            f"{OAUTH_URL}/token/{token_id}",
-            timeout=10
-        )
+        try:
+            response = requests.get(
+                f"{OAUTH_URL}/token/{token_id}",
+                timeout=10
+            )
+
+            response.raise_for_status()
+
+        except requests.exceptions.Timeout:
+            st.error(
+                "Authentication server timed out. Please try again."
+            )
+            st.stop()
+
+        except requests.exceptions.ConnectionError:
+            st.error(
+                "Cannot reach the authentication server."
+            )
+            st.stop()
+
+        except requests.exceptions.RequestException:
+            st.error(
+                "Authentication failed."
+            )
+            st.stop()
 
         if response.status_code != 200:
             return None
