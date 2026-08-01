@@ -8,6 +8,11 @@ from oauth.token_store import get_token, save_token
 load_dotenv()
 
 app = Flask(__name__)
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+)
 app.wsgi_app = ProxyFix(
     app.wsgi_app,
     x_proto=1,
