@@ -1,30 +1,51 @@
 import os
+import logging
+
 from dotenv import load_dotenv
-from flask import Flask, jsonify, redirect, request, url_for
+from flask import Flask, jsonify, redirect, url_for
 from authlib.integrations.flask_client import OAuth
 from werkzeug.middleware.proxy_fix import ProxyFix
+
 from oauth.token_store import get_token, save_token
 
 load_dotenv()
 
+# --------------------------------------------------
+# Logging Configuration
+# --------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+
+logger = logging.getLogger(__name__)
+
+# --------------------------------------------------
+# Flask App
+# --------------------------------------------------
 app = Flask(__name__)
+
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
 )
+
 app.wsgi_app = ProxyFix(
     app.wsgi_app,
     x_proto=1,
     x_host=1
 )
+
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 if not app.secret_key:
-    raise RuntimeError(
-        "FLASK_SECRET_KEY is missing from .env"
-    )
+    logger.critical("FLASK_SECRET_KEY is missing.")
+    raise RuntimeError("FLASK_SECRET_KEY is missing from .env")
 
+# --------------------------------------------------
+# OAuth Configuration
+# --------------------------------------------------
 oauth = OAuth(app)
 
 oauth.register(
@@ -37,9 +58,14 @@ oauth.register(
     },
 )
 
+logger.info("OAuth server initialized successfully.")
 
+# --------------------------------------------------
+# Routes
+# --------------------------------------------------
 @app.route("/")
 def home():
+    logger.info("Health check requested.")
     return {
         "status": "running",
         "service": "OAuth Server"
@@ -48,6 +74,8 @@ def home():
 
 @app.route("/login")
 def login():
+
+    logger.info("Google OAuth login initiated.")
 
     redirect_uri = url_for(
         "authorize",
@@ -66,6 +94,8 @@ def authorize():
 
         token = oauth.google.authorize_access_token()
 
+        logger.info("Google OAuth authentication successful.")
+
         key = save_token(token)
 
         streamlit_url = os.getenv(
@@ -73,16 +103,20 @@ def authorize():
             "http://localhost:8501"
         )
 
+        logger.info("Redirecting authenticated user back to Streamlit.")
+
         return redirect(
             f"{streamlit_url}/?token={key}"
         )
 
-    except Exception as e:
+    except Exception:
+
+        logger.exception("OAuth authentication failed.")
 
         return jsonify(
             {
                 "success": False,
-                "error": str(e)
+                "error": "Authentication failed."
             }
         ), 500
 
@@ -90,9 +124,13 @@ def authorize():
 @app.route("/token/<token_id>")
 def token(token_id):
 
+    logger.info("Token retrieval requested.")
+
     token_data = get_token(token_id)
 
     if token_data is None:
+
+        logger.warning("Invalid or expired token requested.")
 
         return jsonify(
             {
@@ -101,10 +139,17 @@ def token(token_id):
             }
         ), 404
 
+    logger.info("Temporary OAuth token exchanged successfully.")
+
     return jsonify(token_data)
 
 
+# --------------------------------------------------
+# Main
+# --------------------------------------------------
 if __name__ == "__main__":
+
+    logger.info("Starting OAuth server...")
 
     app.run(
         host="0.0.0.0",
