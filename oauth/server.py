@@ -2,7 +2,13 @@ import os
 import logging
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, redirect, url_for
+from flask import (
+    Flask,
+    jsonify,
+    redirect,
+    url_for,
+    session
+)
 from authlib.integrations.flask_client import OAuth
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -93,7 +99,7 @@ def authorize():
     try:
 
         token = oauth.google.authorize_access_token()
-
+        session["google_token"] = token
         logger.info("Google OAuth authentication successful.")
 
         key = save_token(token)
@@ -120,6 +126,37 @@ def authorize():
             }
         ), 500
 
+@app.route("/status")
+def status():
+
+    return jsonify(
+        {
+            "authenticated":
+                "google_token" in session
+        }
+    )
+
+@app.route("/session-token")
+def session_token():
+
+    token = session.get("google_token")
+
+    if token is None:
+
+        return jsonify(
+            {
+                "success": False
+            }
+        ), 401
+
+    key = save_token(token)
+
+    return jsonify(
+        {
+            "success": True,
+            "token": key
+        }
+    )
 
 @app.route("/token/<token_id>")
 def token(token_id):
