@@ -108,6 +108,20 @@ def login():
         redirect_uri
     )
 
+@app.route("/logout")
+def logout():
+
+    session.clear()
+
+    logger.info("User logged out.")
+
+    streamlit_url = os.getenv(
+        "STREAMLIT_URL",
+        "http://localhost:8501"
+    )
+
+    return redirect(streamlit_url)
+
 
 @app.route("/authorize")
 def authorize():

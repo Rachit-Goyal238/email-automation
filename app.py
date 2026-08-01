@@ -38,6 +38,19 @@ if credentials is None:
     )
 
     st.stop()
+if st.sidebar.button("🚪 Logout"):
+
+    st.session_state.clear()
+
+    st.markdown(
+        f"""
+        <meta http-equiv="refresh" content="0; url={OAUTH_URL}/logout">
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.stop()
+    
 
 st.title("📧 TATA Capital Audit Email Automation")
 
